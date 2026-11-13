@@ -181,6 +181,68 @@
     padding: 0 12px;
   }
 
+  /* ===== Kartu promo saat halaman dibuka ===== */
+  .promo {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 32, 43, .62);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+  }
+  .promo[hidden] { display: none; }
+  .promo-card {
+    background: #fff;
+    border-radius: 18px;
+    max-width: 380px;
+    width: 100%;
+    padding: 26px 22px 20px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+  }
+  .promo-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #7a8794;
+    margin-bottom: 8px;
+  }
+  .promo-card h3 {
+    font-size: 21px;
+    line-height: 1.25;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .promo-card p {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .promo-go {
+    display: block;
+    background: #ee4d2d;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 15px;
+    border-radius: 12px;
+  }
+  .promo-go:hover { background: #d94324; }
+  .promo-skip {
+    margin-top: 10px;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 10px;
+    cursor: pointer;
+  }
+
   @media (max-width: 440px) {
     h1 { font-size: 24px; }
     .stores { grid-template-columns: 1fr; }
@@ -259,6 +321,16 @@
   </p>
 </main>
 
+<div class="promo" id="promo" role="dialog" aria-modal="true" aria-labelledby="promoTitle" hidden>
+  <div class="promo-card">
+    <span class="promo-tag">Iklan</span>
+    <h3 id="promoTitle">Cek promo Shopee hari ini</h3>
+    <p>Ada voucher dan diskon yang bisa kamu ambil. Buka di tab baru, halaman ini tetap di sini.</p>
+    <a class="promo-go" id="promoGo" data-no-ad href="https://s.shopee.co.id/8AXZtc29bx" target="_blank" rel="noopener sponsored">Buka promo Shopee</a>
+    <button class="promo-skip" id="promoSkip" data-no-ad type="button">Lewati, lanjut baca</button>
+  </div>
+</div>
+
 <script>
   // ===== Pengaturan iklan popunder =====
   var AD_URL = 'https://s.shopee.co.id/8AXZtc29bx';
@@ -297,7 +369,17 @@
     if (openAd()) {
       visitFlag(true);
     } else {
-      pendingOnOpen = true;
+      // Diblokir browser: tampilkan kartu promo dengan tombol yang diklik pengunjung sendiri
+      var promo = document.getElementById('promo');
+      promo.hidden = false;
+      visitFlag(true);
+      var close = function () { promo.hidden = true; };
+      document.getElementById('promoGo').addEventListener('click', close);
+      document.getElementById('promoSkip').addEventListener('click', close);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') close();
+      });
+      document.getElementById('promoGo').focus();
     }
   }
 
@@ -307,13 +389,6 @@
     if (e.target.closest('[data-no-ad]')) return;
 
     var now = Date.now();
-    if (pendingOnOpen) {
-      // Klik pertama menggantikan pembukaan otomatis yang diblokir (tanpa jeda)
-      pendingOnOpen = false;
-      if (openAd()) visitFlag(true);
-      return;
-    }
-
     if (AD_COOLDOWN_MS > 0 && now - lastAd < AD_COOLDOWN_MS) return;
     openAd();
   }, true);
