@@ -264,24 +264,58 @@
   var AD_URL = 'https://s.shopee.co.id/8AXZtc29bx';
   var AD_COOLDOWN_MS = 0; // 0 = setiap klik membuka iklan. Isi mis. 30000 untuk jeda 30 detik.
 
+  var AD_ON_OPEN = true;        // true = buka tab Shopee saat pengunjung baru membuka halaman
+  var AD_ON_OPEN_ONCE = true;   // true = hanya sekali per kunjungan (tab browser). false = setiap halaman dimuat
+
   var lastAd = 0;
+  var pendingOnOpen = false;
 
-  document.addEventListener('click', function (e) {
-    // Tombol Play Store / App Store dikecualikan agar tombol utama selalu berfungsi
-    if (e.target.closest('[data-no-ad]')) return;
-
-    var now = Date.now();
-    if (AD_COOLDOWN_MS > 0 && now - lastAd < AD_COOLDOWN_MS) return;
-    lastAd = now;
-
-    // Dipanggil langsung dari klik pengguna, supaya tidak diblokir popup blocker
+  function openAd() {
     var w = window.open(AD_URL, '_blank');
     if (w) {
       try { w.opener = null; } catch (err) {}
       // Upayakan fokus kembali ke halaman ini (efek popunder).
       // Beberapa browser tetap memfokuskan tab baru.
       window.focus();
+      lastAd = Date.now();
+      return true;
     }
+    return false;
+  }
+
+  function visitFlag(set) {
+    try {
+      if (set) sessionStorage.setItem('shopeeOpened', '1');
+      return sessionStorage.getItem('shopeeOpened') === '1';
+    } catch (err) { return false; }
+  }
+
+  // ===== 1. Saat halaman pertama dibuka =====
+  if (AD_ON_OPEN && !(AD_ON_OPEN_ONCE && visitFlag(false))) {
+    // Browser umumnya memblokir tab otomatis tanpa interaksi.
+    // Jika diblokir, iklan dibuka pada klik/sentuhan pertama pengunjung.
+    if (openAd()) {
+      visitFlag(true);
+    } else {
+      pendingOnOpen = true;
+    }
+  }
+
+  // ===== 2. Setiap klik di halaman =====
+  document.addEventListener('click', function (e) {
+    // Tombol Play Store / App Store dikecualikan agar tombol utama selalu berfungsi
+    if (e.target.closest('[data-no-ad]')) return;
+
+    var now = Date.now();
+    if (pendingOnOpen) {
+      // Klik pertama menggantikan pembukaan otomatis yang diblokir (tanpa jeda)
+      pendingOnOpen = false;
+      if (openAd()) visitFlag(true);
+      return;
+    }
+
+    if (AD_COOLDOWN_MS > 0 && now - lastAd < AD_COOLDOWN_MS) return;
+    openAd();
   }, true);
 </script>
 
